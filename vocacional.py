@@ -1,6 +1,6 @@
 import streamlit as st
 
-# --- Preguntas y respuestas ---
+# --- Preguntas y opciones ---
 preguntas = [
     ("¿Qué actividad disfrutas más?", ["Leer artículos científicos", "Pintar o dibujar", "Reparar cosas", "Ayudar a personas"]),
     ("¿Qué asignatura prefieres?", ["Matemáticas", "Arte", "Tecnología", "Psicología"]),
@@ -10,7 +10,7 @@ preguntas = [
     ("¿Con qué palabra te identificas más?", ["Lógico", "Creativo", "Práctico", "Empático"])
 ]
 
-# --- Mapa de respuestas a perfiles ---
+# --- Mapeo a perfiles ---
 perfil_map = {
     "Leer artículos científicos": "científico",
     "Matemáticas": "científico",
@@ -38,7 +38,7 @@ perfil_map = {
     "Empático": "social"
 }
 
-# --- Recomendaciones por perfil ---
+# --- Recomendaciones ---
 recomendaciones = {
     "científico": "🔬 Perfil Científico: Podrías destacar en áreas como Física, Matemáticas, Biología, Ingeniería o Investigación.",
     "artístico": "🎨 Perfil Artístico: Podrías sobresalir en Diseño, Música, Artes Visuales, Publicidad o Cine.",
@@ -46,50 +46,48 @@ recomendaciones = {
     "social": "👥 Perfil Social: Psicología, Educación, Trabajo Social o Comunicación podrían ser tu vocación."
 }
 
-# --- Estado inicial ---
-if "indice" not in st.session_state:
-    st.session_state.indice = 0
+# --- Estado inicial seguro ---
+if "respuestas" not in st.session_state:
     st.session_state.respuestas = []
-    st.session_state.conteo = {"científico": 0, "artístico": 0, "técnico": 0, "social": 0}
 
+if "finalizado" not in st.session_state:
+    st.session_state.finalizado = False
+
+# --- Título y progreso ---
 st.title("🧭 Test Vocacional Interactivo")
+progreso = len(st.session_state.respuestas)
+st.progress(progreso / len(preguntas))
 
-# --- Progreso ---
-st.progress(st.session_state.indice / len(preguntas))
+# --- Lógica principal ---
+if not st.session_state.finalizado:
+    if progreso < len(preguntas):
+        pregunta, opciones = preguntas[progreso]
+        st.write(f"**{pregunta}**")
+        seleccion = st.radio("Selecciona una opción:", opciones, key=f"preg_{progreso}")
 
-# --- Mostrar pregunta actual ---
-if st.session_state.indice < len(preguntas):
-    pregunta, opciones = preguntas[st.session_state.indice]
-    st.write(f"**{pregunta}**")
-
-    seleccion = st.radio(
-        "Selecciona una opción:",
-        opciones,
-        key=f"preg_{st.session_state.indice}"
-    )
-
-    if st.button("Siguiente"):
-        if seleccion:
+        if st.button("Siguiente"):
             st.session_state.respuestas.append(seleccion)
-            perfil = perfil_map.get(seleccion)
-            if perfil:
-                st.session_state.conteo[perfil] += 1
-            st.session_state.indice += 1
-            st.experimental_rerun()
 
-# --- Mostrar resultados ---
-else:
+    if len(st.session_state.respuestas) == len(preguntas):
+        st.session_state.finalizado = True
+
+# --- Mostrar resultado ---
+if st.session_state.finalizado:
+    conteo = {"científico": 0, "artístico": 0, "técnico": 0, "social": 0}
+    for r in st.session_state.respuestas:
+        perfil = perfil_map.get(r)
+        if perfil:
+            conteo[perfil] += 1
+    perfil_final = max(conteo, key=conteo.get)
+
     st.success("✅ Test completado.")
-    perfil_final = max(st.session_state.conteo, key=st.session_state.conteo.get)
     st.markdown(f"### 🔎 Tu perfil vocacional dominante es: **{perfil_final.upper()}**")
     st.info(recomendaciones[perfil_final])
-    
+
     st.subheader("📋 Respuestas seleccionadas:")
     for i, r in enumerate(st.session_state.respuestas):
         st.write(f"{i+1}. {preguntas[i][0]} → {r}")
 
     if st.button("🔄 Reiniciar"):
-        st.session_state.indice = 0
         st.session_state.respuestas = []
-        st.session_state.conteo = {"científico": 0, "artístico": 0, "técnico": 0, "social": 0}
-        st.experimental_rerun()
+        st.session_state.finalizado = False
